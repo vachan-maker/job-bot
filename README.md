@@ -22,6 +22,7 @@ A personal, fully automated job application pipeline for Kerala tech job boards 
 - **Walk-in `.ics` export** — calendar events for walk-in drives
 - **Daily digest** — Markdown summary of pipeline state, Band A opportunities
 - **Fully offline-capable ranking** — no LLM needed for scrape/rank/review
+- **Model Context Protocol (MCP) Server** — expose JobBot tools, resources, and prompts over stdio to Claude Desktop, Cursor, Antigravity, and other MCP clients
 
 ---
 
@@ -120,6 +121,7 @@ jobbot status
 jobbot report    [--week]
 jobbot suppress  <company|email> --reason "..."
 jobbot daily     # full pipeline: scrape → rank → tailor → draft → digest
+jobbot mcp       # start JobBot as a Model Context Protocol (MCP) server
 ```
 
 | Flag | Meaning |
@@ -128,6 +130,61 @@ jobbot daily     # full pipeline: scrape → rank → tailor → draft → diges
 | `--force` | Sends outside the configured 10:00–17:00 IST window |
 | `--full` | Re-fetches detail pages for already-seen jobs |
 | `--all-band-A` | Operates on all jobs in Band A |
+
+---
+
+## Model Context Protocol (MCP) Server
+
+JobBot includes a built-in MCP server compliant with standard MCP transports (stdio). This allows AI assistants like **Claude Desktop**, **Antigravity**, **Cursor**, or **Zed** to directly query your job pipeline, search postings, tailor resumes, and send applications.
+
+### Connecting to Claude Desktop / Antigravity / Cursor
+
+Add the following configuration to your client's `mcp_config.json` (or `claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "jobbot": {
+      "command": "/path/to/jobot/.venv/bin/jobbot",
+      "args": ["mcp"],
+      "cwd": "/path/to/jobot"
+    }
+  }
+}
+```
+
+Or using `uv`:
+
+```json
+{
+  "mcpServers": {
+    "jobbot": {
+      "command": "uv",
+      "args": ["--directory", "/path/to/jobot", "run", "jobbot", "mcp"]
+    }
+  }
+}
+```
+
+### Available MCP Tools
+
+| Tool | Description |
+|------|-------------|
+| `get_pipeline_status` | Returns counts by state (shortlisted, tailored, sent, etc.) and band (A, B, C) |
+| `list_jobs` | Lists active jobs filtered by band (`A`, `B`), state, or role family |
+| `get_job_details` | Full JD text, contact emails, deadline, and score breakdown for a job ID |
+| `search_jobs` | Full-text search across titles, companies, and JDs |
+| `tailor_resume` | Runs Tectonic compile and 6-gate validation to produce a tailored PDF |
+| `draft_application` | Renders personalized email draft and previews `.eml` |
+| `approve_application` | Marks a job as approved for sending |
+| `send_application` | Sends application via Gmail SMTP (`dry_run=True` for safe preview) |
+| `suppress_company` | Adds a company to the suppression list |
+| `get_candidate_facts` | Reads verified facts from `profile/facts.md` |
+
+### MCP Resources & Prompts
+
+- **Resources**: `jobbot://status`, `jobbot://jobs/band-a`, `jobbot://facts`
+- **Prompts**: `review_and_tailor` (evaluates top Band A candidates and prompts tailoring actions)
 
 ---
 

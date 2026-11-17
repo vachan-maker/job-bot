@@ -501,5 +501,11 @@ def daily():
     console.print("[bold green]Daily run completed successfully![/bold green]")
     console.print(digest_text)
 
+@app.command()
+def mcp():
+    """Start JobBot as a Model Context Protocol (MCP) server over stdio."""
+    from jobbot.mcp_server import run_server
+    run_server()
+
 if __name__ == "__main__":
     app()
