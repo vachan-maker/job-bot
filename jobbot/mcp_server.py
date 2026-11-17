@@ -2,6 +2,9 @@ import os
 import json
 from pathlib import Path
 from typing import Optional, List, Dict, Any
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from mcp.server.mcpserver import MCPServer
 from jobbot.db import (

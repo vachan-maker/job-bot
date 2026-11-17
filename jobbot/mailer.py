@@ -9,6 +9,9 @@ from typing import Optional, Dict, Any, Tuple
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from jinja2 import Environment, FileSystemLoader
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from jobbot.models import Job, Draft, SendResult
 from jobbot.normalize import normalize_company_name
