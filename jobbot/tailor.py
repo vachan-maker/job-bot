@@ -80,7 +80,7 @@ def call_gemini_tailor(prompt: str) -> Optional[str]:
     try:
         import google.generativeai as genai
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-2.5-flash")
+        model = genai.GenerativeModel("gemini-3.8-flash")
         resp = model.generate_content(prompt)
         text = resp.text.strip()
         # Clean markdown codeblocks if LLM wrapped it
@@ -122,16 +122,23 @@ def tailor_job(job: Job, config: Dict[str, Any], facts_path: Path = Path("profil
     # Attempt LLM edit if key is present; otherwise copy base
     tailored_tex = None
     if os.getenv("GEMINI_API_KEY") and prompt_template:
-        prompt = prompt_template.format(
-            facts=facts_text,
-            jd=job.jd_text or job.title,
-            tex=base_tex_content
+        prompt = (
+            prompt_template
+            .replace("{facts}", facts_text)
+            .replace("{jd}", job.jd_text or job.title)
+            .replace("{tex}", base_tex_content)
         )
         tailored_tex = call_gemini_tailor(prompt)
 
     if not tailored_tex:
         # Fallback to base resume with updated metadata comments
         tailored_tex = base_tex_content
+
+    # Sanitize forbidden terms if present in base template
+    for ft in forbidden_terms:
+        tailored_tex = re.sub(rf'\b{re.escape(ft)}\b', '', tailored_tex)
+    tailored_tex = re.sub(r',\s*,', ',', tailored_tex)
+    tailored_tex = re.sub(r',\s*\}', '}', tailored_tex)
 
     target_tex.write_text(tailored_tex, encoding="utf-8")
 
