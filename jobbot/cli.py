@@ -329,16 +329,20 @@ def approve(
 @app.command()
 def send(
     limit: int = typer.Option(6, "--limit", "-l", help="Max emails to send in this run"),
-    dry_run: bool = typer.Option(False, "--dry-run", "-d", help="Render preview .eml without sending")
+    dry_run: bool = typer.Option(False, "--dry-run", "-d", help="Render preview .eml without sending"),
+    force: bool = typer.Option(False, "--force", "-f", help="Ignore the 10:00–17:00 IST sending window")
 ):
     """Send approved applications."""
     config = load_config()
 
-    if not dry_run:
+    if not dry_run and not force:
         within_window, reason = is_within_sending_window(config)
         if not within_window:
             console.print(f"[bold yellow]Send aborted:[/bold yellow] {reason}")
+            console.print("[dim]Use --force to send outside the configured window.[/dim]")
             return
+    elif force and not dry_run:
+        console.print("[bold yellow]⚠ --force active: bypassing sending window check.[/bold yellow]")
 
     conn = get_connection()
     cursor = conn.cursor()
