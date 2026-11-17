@@ -3,6 +3,9 @@
 
 # Personal data — keep off GitHub
 profile/facts.md
+profile/facts.local.md
+*.local.*
+config.local.yaml
 *.db
 
 # Build output — generated files

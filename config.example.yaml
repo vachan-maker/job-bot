@@ -1,0 +1,100 @@
+candidate:
+  name: "Alex Doe"
+  email: "alex.doe@example.com"
+  phone: "+91 9876543210"
+  linkedin: "linkedin.com/in/alexdoe"
+  github: "github.com/alexdoe"
+  portfolio: "https://alexdoe.dev"
+  facts: "profile/facts.md"
+  resume_root: "~/Resume"
+
+sources:
+  infopark:
+    enabled: true
+    base_url: https://infopark.in
+    max_pages: 30
+    delay: 1.0
+    user_agent: "jobbot/0.1 (job search bot; alex.doe@example.com)"
+  technopark:
+    enabled: true
+    base_url: https://technopark.in
+    per_page: 20
+    delay: 1.0
+    user_agent: "jobbot/0.1 (job search bot; alex.doe@example.com)"
+  ulcyberpark:
+    enabled: true
+    base_url: https://www.ulcyberpark.com
+    delay: 1.0
+    user_agent: "jobbot/0.1 (job search bot; alex.doe@example.com)"
+  smartcity:
+    enabled: true
+    base_url: https://smartcity-kochi.in
+    delay: 1.0
+    user_agent: "jobbot/0.1 (job search bot; alex.doe@example.com)"
+
+filters:
+  locations: [kochi, trivandrum, remote, kerala, unspecified]
+  seniority:
+    accept: [fresher, junior, trainee, intern, associate, graduate, entry]
+    reject: [senior, lead, architect, principal, manager, head]
+  max_experience_years: 2
+  exclude_categories:
+    - sales
+    - marketing
+    - content
+    - accounts
+    - recruiter
+    - legal
+    - insurance
+    - casting
+    - model
+    - support
+    - bpo
+    - hr
+    - human resources
+    - talent acquisition
+    - business development
+    - bde
+    - bda
+    - bdo
+    - graphic
+
+scoring:
+  weights:
+    skills: 0.35
+    title_seniority: 0.20
+    location: 0.15
+    recency: 0.15
+    family_confidence: 0.10
+    novel_company: 0.05
+  thresholds:
+    band_A: 70
+    band_B: 55
+    hard_filter_cutoff: 55
+
+sending:
+  daily_cap: 6
+  hourly_cap: 2
+  allowed_window:
+    start: "10:00"
+    end: "17:00"
+    timezone: "Asia/Kolkata"
+  stagger_seconds: [180, 480]
+
+tailoring:
+  tectonic: "~/.local/bin/tectonic"
+  forbidden_terms:
+    - "CI/CD"
+    - "Docker Compose"
+    - "Helm"
+    - "Terraform"
+    - "Kubernetes"
+    - "Prometheus"
+    - "Grafana"
+    - "AWS Lambda"
+    - "Redis"
+    - "Celery"
+    - "Next.js"
+    - "TypeScript"
+    - "automation framework"
+    - "test suite authoring"

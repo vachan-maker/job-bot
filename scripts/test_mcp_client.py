@@ -1,14 +1,18 @@
 import asyncio
 import json
+import sys
+from pathlib import Path
 from mcp.client.stdio import stdio_client
 from mcp.client.session import ClientSession
 from mcp import StdioServerParameters
 
+REPO_ROOT = Path(__file__).resolve().parent.parent
+
 async def main():
     server_params = StdioServerParameters(
-        command="/path/to/jobot/.venv/bin/jobbot",
+        command=str(REPO_ROOT / ".venv" / "bin" / "jobbot"),
         args=["mcp"],
-        cwd="/path/to/jobot"
+        cwd=str(REPO_ROOT)
     )
 
     print("=" * 70)

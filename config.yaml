@@ -1,12 +1,12 @@
 candidate:
-  name: Alex Doe
-  email: alex.doe@example.com
+  name: "Alex Doe"
+  email: "alex.doe@example.com"
   phone: "+91 9876543210"
-  linkedin: linkedin.com/in/alexdoe
-  github: github.com/alexdoe
-  portfolio: https://alexdoe.dev
-  facts: profile/facts.md
-  resume_root: ~/Resume
+  linkedin: "linkedin.com/in/alexdoe"
+  github: "github.com/alexdoe"
+  portfolio: "https://alexdoe.dev"
+  facts: "profile/facts.md"
+  resume_root: "~/Resume"
 
 sources:
   infopark:
@@ -14,23 +14,23 @@ sources:
     base_url: https://infopark.in
     max_pages: 30
     delay: 1.0
-    user_agent: "jobbot/0.1 (personal job search; alex.doe@example.com)"
+    user_agent: "jobbot/0.1 (job search bot; alex.doe@example.com)"
   technopark:
     enabled: true
     base_url: https://technopark.in
     per_page: 20
     delay: 1.0
-    user_agent: "jobbot/0.1 (personal job search; alex.doe@example.com)"
+    user_agent: "jobbot/0.1 (job search bot; alex.doe@example.com)"
   ulcyberpark:
     enabled: true
     base_url: https://www.ulcyberpark.com
     delay: 1.0
-    user_agent: "jobbot/0.1 (personal job search; alex.doe@example.com)"
+    user_agent: "jobbot/0.1 (job search bot; alex.doe@example.com)"
   smartcity:
     enabled: true
     base_url: https://smartcity-kochi.in
     delay: 1.0
-    user_agent: "jobbot/0.1 (personal job search; alex.doe@example.com)"
+    user_agent: "jobbot/0.1 (job search bot; alex.doe@example.com)"
 
 filters:
   locations: [kochi, trivandrum, remote, kerala, unspecified]
@@ -58,59 +58,43 @@ filters:
     - bda
     - bdo
     - graphic
-    - designer
-    - videographer
-    - video
-    - vfx
-    - animation
-    - electrician
-    - facility
-    - logistics
-    - tele caller
-    - telecaller
-    - telecalling
-    - customer care
-    - call centre
-    - operations
-  skip_walk_ins: true
-  company_cooldown_days: 30
 
-ranking:
-  shortlist_threshold: 70        # Band A (auto-shortlist)
-  review_threshold: 55           # Band B (review queue)
+scoring:
   weights:
-    skills: 45
-    title: 20
-    location: 10
-    recency: 10
-    family: 10
-    novel_company: 5
-
-tailoring:
-  enabled: true
-  max_per_day: 8
-  model: opencode                # falls back to gemini-2.5-flash on failure
-  tectonic: ~/.local/bin/tectonic
-  forbidden_terms:
-    - Selenium
-    - Cypress
-    - STLC
-    - JIRA
-    - Kubernetes
-    - "CI/CD"
-    - Terraform
-    - TestRail
+    skills: 0.35
+    title_seniority: 0.20
+    location: 0.15
+    recency: 0.15
+    family_confidence: 0.10
+    novel_company: 0.05
+  thresholds:
+    band_A: 70
+    band_B: 55
+    hard_filter_cutoff: 55
 
 sending:
-  mode: approve                  # approve | auto | off
-  daily_cap: 12
-  per_run: 6
-  min_gap_seconds: 60
-  max_gap_seconds: 180
-  window: "10:00-17:00"
-  weekdays_only: true
+  daily_cap: 6
+  hourly_cap: 2
+  allowed_window:
+    start: "10:00"
+    end: "17:00"
+    timezone: "Asia/Kolkata"
+  stagger_seconds: [180, 480]
 
-followup:
-  enabled: false                 # enable after 2 weeks of data
-  after_days: 7
-  max: 1
+tailoring:
+  tectonic: "~/.local/bin/tectonic"
+  forbidden_terms:
+    - "CI/CD"
+    - "Docker Compose"
+    - "Helm"
+    - "Terraform"
+    - "Kubernetes"
+    - "Prometheus"
+    - "Grafana"
+    - "AWS Lambda"
+    - "Redis"
+    - "Celery"
+    - "Next.js"
+    - "TypeScript"
+    - "automation framework"
+    - "test suite authoring"

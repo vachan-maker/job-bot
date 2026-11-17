@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "jobbot": {
+      "command": "/path/to/jobot/.venv/bin/jobbot",
+      "args": ["mcp"],
+      "cwd": "/path/to/jobot"
+    }
+  }
+}

@@ -21,7 +21,7 @@ class TechnoparkSource:
     def __init__(
         self,
         base_url: str = "https://technopark.in",
-        user_agent: str = "jobbot/0.1 (personal job search; alex.doe@example.com)",
+        user_agent: str = "jobbot/0.1 (job search bot; user@example.com)",
         delay: float = 1.0,
         per_page: int = 20
     ):

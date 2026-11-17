@@ -13,7 +13,7 @@ from jobbot.normalize import normalize_company_name
 load_dotenv()
 
 def poll_imap_for_replies(db_path: Path = Path("jobbot.db")) -> Dict[str, Any]:
-    gmail_user = os.getenv("GMAIL_USER") or "alex.doe@example.com"
+    gmail_user = os.getenv("GMAIL_USER") or "user@example.com"
     gmail_password = os.getenv("GMAIL_APP_PASSWORD")
 
     results = {"replies_found": 0, "bounces_found": 0, "errors": []}

@@ -55,7 +55,7 @@ def render_draft(job: Job, pdf_path: Path, config: Dict[str, Any], template_dir:
     if job.subject_override:
         subject = job.subject_override
     else:
-        subject = f"Application: {job.title} - {candidate.get('name', 'Alex Doe')}"
+        subject = f"Application: {job.title} - {candidate.get('name', 'Applicant')}"
 
     env = Environment(loader=FileSystemLoader(str(template_dir)))
     template = env.get_template("email.j2")
@@ -69,12 +69,12 @@ def render_draft(job: Job, pdf_path: Path, config: Dict[str, Any], template_dir:
         source=job.source,
         posted_on=job.posted_on,
         pitch=pitch,
-        portfolio=candidate.get("portfolio", "https://alexdoe.dev"),
-        candidate_name=candidate.get("name", "Alex Doe"),
+        portfolio=candidate.get("portfolio", "https://example.com"),
+        candidate_name=candidate.get("name", "Applicant"),
         phone=candidate.get("phone", "+91 9876543210"),
-        email=candidate.get("email", "alex.doe@example.com"),
-        linkedin=candidate.get("linkedin", "linkedin.com/in/alexdoe"),
-        github=candidate.get("github", "github.com/alexdoe")
+        email=candidate.get("email", "applicant@example.com"),
+        linkedin=candidate.get("linkedin", "linkedin.com/in/applicant"),
+        github=candidate.get("github", "github.com/applicant")
     )
 
     return Draft(
@@ -83,7 +83,7 @@ def render_draft(job: Job, pdf_path: Path, config: Dict[str, Any], template_dir:
         subject=subject,
         body_text=body,
         pdf_path=str(pdf_path),
-        bcc=candidate.get("email", "alex.doe@example.com")
+        bcc=candidate.get("email", "applicant@example.com")
     )
 
 def is_within_sending_window(config: Dict[str, Any]) -> Tuple[bool, str]:
@@ -114,12 +114,12 @@ def is_within_sending_window(config: Dict[str, Any]) -> Tuple[bool, str]:
 
 def create_mime_message(draft: Draft, config: Dict[str, Any]) -> EmailMessage:
     candidate = config.get("candidate", {})
-    from_addr = f"{candidate.get('name', 'Alex Doe')} <{candidate.get('email', 'alex.doe@example.com')}>"
+    from_addr = f"{candidate.get('name', 'Applicant')} <{candidate.get('email', 'applicant@example.com')}>"
 
     msg = EmailMessage()
     msg["To"] = draft.to_addr
     msg["From"] = from_addr
-    msg["Reply-To"] = candidate.get("email", "alex.doe@example.com")
+    msg["Reply-To"] = candidate.get("email", "applicant@example.com")
     if draft.bcc:
         msg["Bcc"] = draft.bcc
     msg["Subject"] = draft.subject

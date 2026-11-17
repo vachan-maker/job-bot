@@ -23,16 +23,18 @@ def test_mailer_draft_and_mime():
             role_family="php_laravel"
         )
 
+        candidate_name = config.get("candidate", {}).get("name", "Applicant")
+        candidate_email = config.get("candidate", {}).get("email", "applicant@example.com")
         draft = render_draft(job, dummy_pdf, config)
         assert draft.to_addr == "hr@acme.com"
         assert "Laravel Developer" in draft.subject
-        assert "Alex Doe" in draft.body_text
+        assert candidate_name in draft.body_text
         assert "LogicLabz" in draft.body_text
 
         msg = create_mime_message(draft, config)
         assert msg["To"] == "hr@acme.com"
-        assert msg["Bcc"] == "alex.doe@example.com"
-        assert msg["Reply-To"] == "alex.doe@example.com"
+        assert msg["Bcc"] == candidate_email
+        assert msg["Reply-To"] == candidate_email
         assert msg["Message-ID"]
 
         # Check attachment

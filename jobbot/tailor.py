@@ -166,10 +166,12 @@ def tailor_job(job: Job, config: Dict[str, Any], facts_path: Path = Path("profil
     if not valid:
         return False, pdf_path, {"validation": validation_results}
 
-    # Rename final PDF to standard format: Alex Doe-<Company>-<Role>.pdf
+    # Rename final PDF to standard format: <Candidate>-<Company>-<Role>.pdf
+    candidate_name = config.get("candidate", {}).get("name", "Resume")
+    safe_candidate = re.sub(r'[^a-zA-Z0-9]', '', candidate_name)
     safe_company = re.sub(r'[^a-zA-Z0-9]', '', job.company)
     safe_role = re.sub(r'[^a-zA-Z0-9]', '', job.title)
-    final_pdf_name = f"Alex Doe-{safe_company}-{safe_role}.pdf"
+    final_pdf_name = f"{safe_candidate}-{safe_company}-{safe_role}.pdf"
     final_pdf_path = out_dir / final_pdf_name
     shutil.copy2(pdf_path, final_pdf_path)
 
