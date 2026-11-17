@@ -1,0 +1,34 @@
+[project]
+name = "jobbot"
+version = "0.1.0"
+description = "Add your description here"
+authors = [
+    { name = "alexdoe", email = "alex.doe@example.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "beautifulsoup4>=4.15.0",
+    "google-generativeai>=0.8.6",
+    "jinja2>=3.1.6",
+    "lxml>=6.1.3",
+    "pydantic>=2.14.3",
+    "python-dotenv>=1.2.4",
+    "pyyaml>=6.0.3",
+    "requests>=2.34.2",
+    "rich>=15.0.0",
+    "typer>=0.29.1",
+]
+
+[project.scripts]
+jobbot = "jobbot.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "pytest-httpx>=0.36.2",
+    "responses>=0.26.3",
+]

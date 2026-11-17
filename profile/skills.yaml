@@ -1,0 +1,205 @@
+families:
+  php_laravel:
+    base_resumes:
+      - MEDOWA_GLOBAL_LARAVEL_PHP_DEVELOPER
+    triggers:
+      - php
+      - laravel
+      - filament
+      - eloquent
+      - blade
+      - composer
+    must_have:
+      - php
+      - laravel
+      - mysql
+      - rest api
+      - eloquent
+      - blade
+      - composer
+      - html
+      - css
+      - javascript
+      - git
+      - sanctum
+      - filament
+      - oop
+      - mvc
+    nice_to_have:
+      - redis
+      - docker
+      - tailwind
+      - bootstrap
+      - postgresql
+
+  qa_testing:
+    base_resumes:
+      - SCALGO_QA_Intern
+      - AUGUSTA_HITECH_QA_ENGINEER
+    triggers:
+      - qa
+      - test engineer
+      - sdet
+      - manual testing
+      - playwright
+      - postman
+      - regression
+      - quality assurance
+      - software tester
+    must_have:
+      - qa
+      - manual testing
+      - regression
+      - playwright
+      - postman
+      - api testing
+      - smoke testing
+      - bug reporting
+      - test cases
+      - defect tracking
+      - web testing
+      - mobile testing
+      - functional testing
+      - git
+      - black box
+    nice_to_have:
+      - automated testing
+      - rest api
+      - android
+      - python
+      - javascript
+
+  devops_cloud:
+    base_resumes:
+      - LOGIOLOGY_JUNIOR_CLOUD_DEVOPS_ENGINEER
+      - COMPRINNO_DEVOPS_ENGINEER_INTERN
+      - ZENOCLOUD_CLOUD_DEVOPS_INTERN
+    triggers:
+      - devops
+      - sre
+      - cloud
+      - docker
+      - linux
+      - aws
+      - deployment
+      - systems engineer
+    must_have:
+      - docker
+      - linux
+      - bash
+      - shell
+      - git
+      - networking
+      - aws
+      - cloud
+      - containers
+      - troubleshooting
+      - web server
+      - nginx
+      - virtual machines
+      - deployment
+      - security
+    nice_to_have:
+      - python
+      - cicd
+      - automation
+      - monitoring
+
+  python_django:
+    base_resumes:
+      - IVBM_JUNIOR_DEVELOPER_PYTHON_DJANGO
+    triggers:
+      - python
+      - django
+      - flask
+      - fastapi
+      - backend
+    must_have:
+      - python
+      - django
+      - rest api
+      - sql
+      - sqlite
+      - postgresql
+      - git
+      - orm
+      - backend
+      - oop
+      - html
+      - css
+      - javascript
+      - http
+      - crud
+    nice_to_have:
+      - fastapi
+      - flask
+      - docker
+      - celery
+      - redis
+
+  fullstack_js:
+    base_resumes:
+      - THALES_SOFTWARE_ENGINEER
+    triggers:
+      - react
+      - node
+      - javascript
+      - full stack
+      - mern
+      - typescript
+      - frontend
+      - web developer
+    must_have:
+      - javascript
+      - typescript
+      - react
+      - node
+      - node.js
+      - express
+      - html5
+      - css3
+      - rest api
+      - git
+      - sql
+      - mongodb
+      - frontend
+      - backend
+      - full stack
+    nice_to_have:
+      - next.js
+      - tailwind
+      - redux
+      - postgresql
+
+  ai_ml:
+    base_resumes:
+      - LATENTFORCE_RESEARCH_INTERN_AGENTIC_AI
+    triggers:
+      - ml
+      - ai
+      - llm
+      - rag
+      - data science
+      - research intern
+      - artificial intelligence
+      - machine learning
+    must_have:
+      - python
+      - machine learning
+      - ai
+      - llm
+      - rag
+      - prompt engineering
+      - vector database
+      - data processing
+      - nlp
+      - git
+      - api
+      - agent
+      - embeddings
+      - pandas
+      - numpy
+    nice_to_have:
+      - langchain
+      - pytorch
+      - huggingface
