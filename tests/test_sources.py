@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 from jobbot.sources.infopark import InfoparkSource
 from jobbot.sources.technopark import TechnoparkSource
+from jobbot.sources.ulcyberpark import ULCyberparkSource
 from jobbot.models import Job
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
@@ -38,6 +39,43 @@ def test_infopark_detail_parsing():
     assert enriched.jd_text
     assert enriched.jd_hash
     assert enriched.dedupe_key
+
+def test_ulcyberpark_list_parsing():
+    html_file = FIXTURES_DIR / "ulcyberpark_list.html"
+    assert html_file.exists()
+
+    source = ULCyberparkSource()
+    jobs = source.parse_list_page(html_file.read_text(encoding="utf-8"))
+
+    assert len(jobs) >= 5
+    for job in jobs:
+        assert job.source == "ulcyberpark"
+        assert job.source_job_id
+        assert job.url.startswith("https://www.ulcyberpark.com")
+        assert job.company
+        assert job.title
+        assert job.location_class == "kerala"
+
+def test_ulcyberpark_detail_parsing():
+    detail_file = FIXTURES_DIR / "ulcyberpark_detail_1703.html"
+    assert detail_file.exists()
+
+    source = ULCyberparkSource()
+    dummy_job = Job(
+        source="ulcyberpark",
+        source_job_id="1703",
+        url="https://www.ulcyberpark.com/jobs/job_vacancy?job_id=1703",
+        company="Tranetech Software Solutions",
+        title="Junior Quality Analyst"
+    )
+
+    enriched = source.parse_detail_page(dummy_job, detail_file.read_text(encoding="utf-8"))
+    assert enriched.jd_text
+    assert enriched.jd_hash
+    assert enriched.dedupe_key
+    assert len(enriched.emails) > 0
+    # hr.admin@tranetech.ae should be present and prioritized
+    assert any("tranetech" in e for e in enriched.emails)
     assert isinstance(enriched.emails, list)
 
 def test_technopark_list_parsing():
@@ -77,3 +115,40 @@ def test_technopark_detail_parsing():
     assert enriched.jd_text
     assert enriched.jd_hash
     assert enriched.dedupe_key
+
+def test_ulcyberpark_list_parsing():
+    html_file = FIXTURES_DIR / "ulcyberpark_list.html"
+    assert html_file.exists()
+
+    source = ULCyberparkSource()
+    jobs = source.parse_list_page(html_file.read_text(encoding="utf-8"))
+
+    assert len(jobs) >= 5
+    for job in jobs:
+        assert job.source == "ulcyberpark"
+        assert job.source_job_id
+        assert job.url.startswith("https://www.ulcyberpark.com")
+        assert job.company
+        assert job.title
+        assert job.location_class == "kerala"
+
+def test_ulcyberpark_detail_parsing():
+    detail_file = FIXTURES_DIR / "ulcyberpark_detail_1703.html"
+    assert detail_file.exists()
+
+    source = ULCyberparkSource()
+    dummy_job = Job(
+        source="ulcyberpark",
+        source_job_id="1703",
+        url="https://www.ulcyberpark.com/jobs/job_vacancy?job_id=1703",
+        company="Tranetech Software Solutions",
+        title="Junior Quality Analyst"
+    )
+
+    enriched = source.parse_detail_page(dummy_job, detail_file.read_text(encoding="utf-8"))
+    assert enriched.jd_text
+    assert enriched.jd_hash
+    assert enriched.dedupe_key
+    assert len(enriched.emails) > 0
+    # hr.admin@tranetech.ae should be present and prioritized
+    assert any("tranetech" in e for e in enriched.emails)

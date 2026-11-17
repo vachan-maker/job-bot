@@ -17,6 +17,7 @@ from jobbot.db import (
 from jobbot.models import Job, Draft
 from jobbot.sources.infopark import InfoparkSource
 from jobbot.sources.technopark import TechnoparkSource
+from jobbot.sources.ulcyberpark import ULCyberparkSource
 from jobbot.rank import (
     load_config, load_skills, check_hard_filters, check_preliminary_title_filters, calculate_score
 )
@@ -38,11 +39,11 @@ def main_callback():
 
 @app.command()
 def scrape(
-    source: str = typer.Option("all", "--source", "-s", help="Source to scrape: all | infopark | technopark"),
+    source: str = typer.Option("all", "--source", "-s", help="Source to scrape: all | infopark | technopark | ulcyberpark"),
     full: bool = typer.Option(False, "--full", "-f", help="Force re-fetch details for already seen jobs"),
     max_pages: Optional[int] = typer.Option(None, "--max-pages", "-p", help="Max pages per source")
 ):
-    """Scrape job postings from Infopark and Technopark."""
+    """Scrape job postings from Infopark, Technopark, and UL Cyberpark."""
     config = load_config()
     sources_to_run = []
 
@@ -67,6 +68,17 @@ def scrape(
                     user_agent=cfg.get("user_agent", "jobbot/0.1"),
                     delay=cfg.get("delay", 1.0),
                     per_page=cfg.get("per_page", 20)
+                )
+            )
+
+    if source in ("all", "ulcyberpark"):
+        cfg = config.get("sources", {}).get("ulcyberpark", {})
+        if cfg.get("enabled", True):
+            sources_to_run.append(
+                ULCyberparkSource(
+                    base_url=cfg.get("base_url", "https://www.ulcyberpark.com"),
+                    user_agent=cfg.get("user_agent", "jobbot/0.1"),
+                    delay=cfg.get("delay", 1.0)
                 )
             )
 
@@ -155,30 +167,41 @@ def rank(
 @app.command()
 def review(
     band: Optional[str] = typer.Option(None, "--band", "-b", help="Filter by band: A | B | C"),
-    limit: int = typer.Option(25, "--limit", "-l", help="Number of jobs to show")
+    state: Optional[str] = typer.Option(None, "--state", "-s", help="Filter by state: new|ranked|shortlisted|tailored|drafted|approved|sent|replied|bounced|skipped|manual"),
+    limit: int = typer.Option(50, "--limit", "-l", help="Number of jobs to show"),
+    all_jobs: bool = typer.Option(False, "--all", "-a", help="Include skipped jobs")
 ):
     """Review ranked jobs in a tabular view."""
     conn = get_connection()
     cursor = conn.cursor()
 
-    query = "SELECT id, source, company, title, role_family, score, band, state, skip_reason FROM jobs"
+    conditions = []
     params = []
 
     if band:
-        query += " WHERE band = ?"
+        conditions.append("band = ?")
         params.append(band.upper())
-    else:
-        query += " WHERE state != 'skipped'"
 
-    query += " ORDER BY score DESC, id ASC LIMIT ?"
+    if state:
+        conditions.append("state = ?")
+        params.append(state.lower())
+    elif not all_jobs:
+        conditions.append("state != 'skipped'")
+
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    query = f"SELECT id, source, company, title, role_family, score, band, state, skip_reason FROM jobs {where} ORDER BY score DESC, id ASC LIMIT ?"
     params.append(limit)
 
     cursor.execute(query, tuple(params))
     rows = cursor.fetchall()
     conn.close()
 
-    table = Table(title=f"JobBot Review Queue {'(Band ' + band.upper() + ')' if band else ''}")
+    band_label = f" (Band {band.upper()})" if band else ""
+    state_label = f" [{state}]" if state else ""
+    all_label = " [all incl. skipped]" if all_jobs else ""
+    table = Table(title=f"JobBot Review Queue{band_label}{state_label}{all_label} — {len(rows)} jobs")
     table.add_column("ID", justify="right", style="cyan", no_wrap=True)
+    table.add_column("Src", style="dim")
     table.add_column("Company", style="magenta")
     table.add_column("Title", style="white")
     table.add_column("Family", style="green")
@@ -187,16 +210,19 @@ def review(
     table.add_column("State", style="blue")
 
     for r in rows:
-        band_style = "green" if r["band"] == "A" else ("yellow" if r["band"] == "B" else "red")
-        band_str = f"[{band_style}]{r['band'] or '-'}[/{band_style}]"
+        b = r["band"] or "-"
+        band_color = {"A": "green", "B": "yellow", "C": "red"}.get(b, "dim")
+        state_color = {"shortlisted": "green", "tailored": "cyan", "sent": "blue",
+                       "skipped": "dim", "manual": "red", "replied": "bright_green"}.get(r["state"], "white")
         table.add_row(
             str(r["id"]),
-            r["company"][:25],
-            r["title"][:35],
+            r["source"][:4],
+            r["company"][:22],
+            r["title"][:32],
             r["role_family"] or "-",
             str(r["score"] or 0),
-            band_str,
-            r["state"]
+            f"[{band_color}]{b}[/{band_color}]",
+            f"[{state_color}]{r['state']}[/{state_color}]"
         )
 
     console.print(table)
