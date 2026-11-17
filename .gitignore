@@ -4,13 +4,18 @@
 # Personal data — keep off GitHub
 profile/facts.md
 profile/facts.local.md
-*.local.*
+profile/facts.local.*
 config.local.yaml
+config.local.yml
+*.local.*
+*.local
 *.db
+jobbot.db
 
-# Build output — generated files
+# Build output & email previews — generated files
 out/
 *.pdf
+*.eml
 *.tex.bak
 
 # Python
