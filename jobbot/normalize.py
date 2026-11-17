@@ -51,8 +51,8 @@ def classify_location(location_str: Optional[str]) -> str:
     if any(k in loc for k in ["remote", "wfh", "work from home", "anywhere"]):
         return "remote"
 
-    # Kochi / Cochin / Infopark
-    if any(k in loc for k in ["kochi", "cochin", "infopark", "kakkanad", "ernakulam"]):
+    # Kochi / Cochin / Infopark / SmartCity
+    if any(k in loc for k in ["kochi", "cochin", "infopark", "smartcity", "kakkanad", "ernakulam"]):
         return "kochi"
 
     # Trivandrum / Technopark
@@ -90,7 +90,7 @@ def extract_emails(text: str) -> List[str]:
     # Sort by priority: hr@, careers@, jobs@, hiring@ first
     def email_priority(e: str) -> int:
         domain = e.split("@")[-1] if "@" in e else ""
-        if domain in ["ulcyberpark.com", "technopark.in", "infopark.in"]:
+        if domain in ["ulcyberpark.com", "technopark.in", "infopark.in", "smartcity-kochi.in"]:
             return 3
         user = e.split("@")[0]
         if any(p in user for p in ["hr", "careers", "jobs", "hiring", "recruitment", "talent"]):

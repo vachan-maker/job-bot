@@ -18,6 +18,7 @@ from jobbot.models import Job, Draft
 from jobbot.sources.infopark import InfoparkSource
 from jobbot.sources.technopark import TechnoparkSource
 from jobbot.sources.ulcyberpark import ULCyberparkSource
+from jobbot.sources.smartcity import SmartCitySource
 from jobbot.rank import (
     load_config, load_skills, check_hard_filters, check_preliminary_title_filters, calculate_score
 )
@@ -39,11 +40,11 @@ def main_callback():
 
 @app.command()
 def scrape(
-    source: str = typer.Option("all", "--source", "-s", help="Source to scrape: all | infopark | technopark | ulcyberpark"),
+    source: str = typer.Option("all", "--source", "-s", help="Source to scrape: all | infopark | technopark | ulcyberpark | smartcity"),
     full: bool = typer.Option(False, "--full", "-f", help="Force re-fetch details for already seen jobs"),
     max_pages: Optional[int] = typer.Option(None, "--max-pages", "-p", help="Max pages per source")
 ):
-    """Scrape job postings from Infopark, Technopark, and UL Cyberpark."""
+    """Scrape job postings from Infopark, Technopark, UL Cyberpark, and SmartCity Kochi."""
     config = load_config()
     sources_to_run = []
 
@@ -77,6 +78,17 @@ def scrape(
             sources_to_run.append(
                 ULCyberparkSource(
                     base_url=cfg.get("base_url", "https://www.ulcyberpark.com"),
+                    user_agent=cfg.get("user_agent", "jobbot/0.1"),
+                    delay=cfg.get("delay", 1.0)
+                )
+            )
+
+    if source in ("all", "smartcity"):
+        cfg = config.get("sources", {}).get("smartcity", {})
+        if cfg.get("enabled", True):
+            sources_to_run.append(
+                SmartCitySource(
+                    base_url=cfg.get("base_url", "https://smartcity-kochi.in"),
                     user_agent=cfg.get("user_agent", "jobbot/0.1"),
                     delay=cfg.get("delay", 1.0)
                 )

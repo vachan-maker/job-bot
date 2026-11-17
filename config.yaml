@@ -26,6 +26,11 @@ sources:
     base_url: https://www.ulcyberpark.com
     delay: 1.0
     user_agent: "jobbot/0.1 (personal job search; alex.doe@example.com)"
+  smartcity:
+    enabled: true
+    base_url: https://smartcity-kochi.in
+    delay: 1.0
+    user_agent: "jobbot/0.1 (personal job search; alex.doe@example.com)"
 
 filters:
   locations: [kochi, trivandrum, remote, kerala, unspecified]

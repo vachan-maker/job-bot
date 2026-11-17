@@ -1,6 +1,6 @@
 # JobBot 🤖
 
-A personal, fully automated job application pipeline for Kerala tech job boards — **Infopark**, **Technopark**, and **UL Cyberpark** (Kozhikode). JobBot scrapes postings, filters and scores them against your profile, tailors a LaTeX resume using an LLM, compiles it via Tectonic, validates it through 6 quality gates, and sends personalized emails — all from the command line.
+A personal, fully automated job application pipeline for Kerala tech job boards — **Infopark**, **Technopark**, **UL Cyberpark** (Kozhikode), and **SmartCity Kochi**. JobBot scrapes postings, filters and scores them against your profile, tailors a LaTeX resume using an LLM, compiles it via Tectonic, validates it through 6 quality gates, and sends personalized emails — all from the command line.
 
 > **Scope:** Personal tool. Targets entry-level / fresher engineering roles in Kochi, Trivandrum, Kozhikode/Calicut, Remote, and Kerala. Built for and around one candidate's resume workspace — adapt the config and profile files for your own use.
 
@@ -8,7 +8,7 @@ A personal, fully automated job application pipeline for Kerala tech job boards 
 
 ## Features
 
-- **Multi-source scraping** — Infopark (HTML table), Technopark (Laravel JSON API), and UL Cyberpark (HTML vacancy directory), 1 req/s, polite `User-Agent`
+- **Multi-source scraping** — Infopark (HTML table), Technopark (Laravel JSON API), UL Cyberpark (HTML vacancy directory), and SmartCity Kochi (news entries), 1 req/s, polite `User-Agent`
 - **Hard filtering** — seniority keywords, excluded categories (sales, marketing, BPO, etc.), expired deadlines, location rejection, 2+ year experience requirements
 - **Walk-in detection** — title regex *and* `is_walk_in` flag; walk-ins are exported to `.ics` calendar files and never emailed
 - **Scoring (0–100)** — skill keyword density, title/seniority fit, location, recency, role family confidence, novel company bonus
@@ -108,7 +108,7 @@ uv run jobbot review --band A   # inspect Band A shortlist
 ## CLI Reference
 
 ```
-jobbot scrape    [--source all|infopark|technopark|ulcyberpark] [--max-pages N] [--full]
+jobbot scrape    [--source all|infopark|technopark|ulcyberpark|smartcity] [--max-pages N] [--full]
 jobbot rank      [--min-score 55]
 jobbot review    [--band A|B|C] [--limit N]
 jobbot tailor    <id...> | --top 8
