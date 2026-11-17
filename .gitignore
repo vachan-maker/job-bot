@@ -1,11 +1,39 @@
+# Credentials — never commit
 .env
+
+# Personal data — keep off GitHub
+profile/facts.md
+*.db
+
+# Build output — generated files
 out/
 *.pdf
-*.db
+*.tex.bak
+
+# Python
 __pycache__/
 *.py[oc]
+*.pyo
+.venv/
 build/
 dist/
 wheels/
 *.egg-info/
-.venv/
+.eggs/
+
+# Testing artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
