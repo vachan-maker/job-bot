@@ -18,7 +18,7 @@ from jobbot.models import Job, Draft
 from jobbot.sources.infopark import InfoparkSource
 from jobbot.sources.technopark import TechnoparkSource
 from jobbot.rank import (
-    load_config, load_skills, check_hard_filters, calculate_score
+    load_config, load_skills, check_hard_filters, check_preliminary_title_filters, calculate_score
 )
 from jobbot.tailor import tailor_job
 from jobbot.mailer import render_draft, send_draft, is_within_sending_window
@@ -90,7 +90,7 @@ def scrape(
             existing = cursor.fetchone()
 
             # Pre-filter by title/company before fetching detail to avoid unnecessary load
-            passed_title_filter, reject_reason = check_hard_filters(job, config)
+            passed_title_filter, reject_reason = check_preliminary_title_filters(job, config)
 
             needs_detail = full or (existing is None) or (not existing["jd_text"])
             if needs_detail and passed_title_filter:
@@ -250,10 +250,13 @@ def tailor(
                     datetime.now().isoformat()
                 )
             )
-            update_job_state(job.id, state="tailored")
+            cursor.execute("UPDATE jobs SET state = ?, skip_reason = NULL WHERE id = ?", ("tailored", job.id))
             console.print(f"[bold green]Successfully tailored and validated:[/bold green] {pdf_path.name}")
         else:
-            update_job_state(job.id, state="manual", skip_reason="Tailoring/Validation failed")
+            cursor.execute(
+                "UPDATE jobs SET state = ?, skip_reason = ? WHERE id = ?",
+                ("manual", "Tailoring/Validation failed", job.id)
+            )
             console.print(f"[bold red]Failed tailoring job {job.id}:[/bold red] {details.get('error') or details.get('validation')}")
 
     conn.commit()
@@ -291,7 +294,7 @@ def draft(
 
         # Save draft eml in preview
         send_draft(draft_obj, config, dry_run=True)
-        update_job_state(job.id, state="drafted")
+        cursor.execute("UPDATE jobs SET state = ? WHERE id = ?", ("drafted", job.id))
         console.print(f"[green]Draft generated for Job {job.id} ({job.company}): {draft_obj.subject}[/green]")
 
     conn.commit()
@@ -313,12 +316,14 @@ def approve(
         ids = job_ids
     else:
         console.print("[yellow]Specify job IDs or use --all-band-A[/yellow]")
+        conn.close()
         return
 
     for jid in ids:
-        update_job_state(jid, state="approved")
+        cursor.execute("UPDATE jobs SET state = 'approved' WHERE id = ?", (jid,))
         console.print(f"[bold green]Job {jid} approved for sending.[/bold green]")
 
+    conn.commit()
     conn.close()
 
 @app.command()
@@ -342,6 +347,7 @@ def send(
 
     if not jobs:
         console.print("[yellow]No approved applications ready to send.[/yellow]")
+        conn.close()
         return
 
     console.print(f"Sending {len(jobs)} applications (dry_run={dry_run})...")
@@ -375,7 +381,8 @@ def send(
                 """,
                 (company_key, job.company, datetime.now().isoformat())
             )
-            update_job_state(job.id, state="sent" if not dry_run else "approved")
+            new_state = "sent" if not dry_run else "approved"
+            cursor.execute("UPDATE jobs SET state = ? WHERE id = ?", (new_state, job.id))
             console.print(f"[green]Successfully processed Job {job.id} to {res.to_addr} (Status: {res.status})[/green]")
         else:
             console.print(f"[bold red]Failed sending to {res.to_addr}: {res.error}[/bold red]")

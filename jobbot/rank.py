@@ -43,43 +43,60 @@ END:VCALENDAR"""
         f.write(ics_content)
     return filename
 
-def check_hard_filters(job: Job, config: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+def check_preliminary_title_filters(job: Job, config: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
     today = date.today()
 
-    # 1. Expired
+    # 1. Expired deadline
     if job.deadline and job.deadline < today:
         return False, f"Expired deadline: {job.deadline}"
 
-    # 2. Walk-in check (Title regex or flag)
+    # 2. Walk-in in title
     if job.is_walk_in == 1 or re.search(r'walk.?in', job.title, re.I):
         export_walk_in_ics(job)
         return False, "Walk-in drive (exported to .ics)"
 
-    # 3. No contact (emails empty and no ats link)
-    if not job.emails:
-        # Check if JD mentions an ATS link or apply link
-        ats_pattern = r'https?://[^\s]+(?:greenhouse|lever|workday|smartrecruiters|naukri|indeed|forms\.gle)[^\s]*'
-        if job.jd_text and re.search(ats_pattern, job.jd_text, re.I):
-            return False, "ATS application link only"
-        return False, "No contact email found"
-
-    # 4. Seniority reject in title
+    # 3. Seniority reject in title
     seniority_reject = [r'\bsenior\b', r'\blead\b', r'\barchitect\b', r'\bprincipal\b', r'\bmanager\b', r'\bhead\b', r'\bsr\.?\b']
     for pat in seniority_reject:
         if re.search(pat, job.title, re.I):
             return False, f"Seniority rejected: title matched '{pat}'"
 
-    # 5. Excluded category in title or JD
+    # 4. Excluded category in title
     exclude_categories = config.get("filters", {}).get("exclude_categories", [
         "sales", "marketing", "content", "accounts", "recruiter", "legal",
         "insurance", "casting", "model", "support", "bpo"
     ])
     for cat in exclude_categories:
-        # Check word boundary in title
         if re.search(rf'\b{re.escape(cat)}\b', job.title, re.I):
             return False, f"Excluded category: title matched '{cat}'"
 
-    # 6. Experience req >= 3 years extracted from JD
+    # 5. Location other
+    if job.location_class == "other":
+        return False, f"Location rejected: {job.location_raw}"
+
+    # 6. Already applied / suppressed company
+    company_key = normalize_company_name(job.company)
+    cooldown = config.get("filters", {}).get("company_cooldown_days", 30)
+    if is_company_suppressed(company_key, cooldown_days=cooldown):
+        return False, f"Company '{job.company}' ({company_key}) is suppressed or in cooldown"
+
+    return True, None
+
+def check_hard_filters(job: Job, config: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+    # Run preliminary title filters first
+    passed, reason = check_preliminary_title_filters(job, config)
+    if not passed:
+        return False, reason
+
+    # Post-detail checks:
+    # 7. No contact (emails empty and no ats link)
+    if not job.emails:
+        ats_pattern = r'https?://[^\s]+(?:greenhouse|lever|workday|smartrecruiters|naukri|indeed|forms\.gle)[^\s]*'
+        if job.jd_text and re.search(ats_pattern, job.jd_text, re.I):
+            return False, "ATS application link only"
+        return False, "No contact email found"
+
+    # 8. Experience req >= 3 years extracted from JD
     if job.jd_text:
         exp_matches = re.findall(r'(\d+)\+?\s*(?:years?|yrs?)', job.jd_text, re.I)
         for exp_str in exp_matches:
@@ -89,16 +106,6 @@ def check_hard_filters(job: Job, config: Dict[str, Any]) -> Tuple[bool, Optional
                     return False, f"Experience requirement too high: {exp_val}+ years"
             except ValueError:
                 pass
-
-    # 7. Location class is 'other'
-    if job.location_class == "other":
-        return False, f"Location rejected: {job.location_raw}"
-
-    # 8. Already applied / suppressed company
-    company_key = normalize_company_name(job.company)
-    cooldown = config.get("filters", {}).get("company_cooldown_days", 30)
-    if is_company_suppressed(company_key, cooldown_days=cooldown):
-        return False, f"Company '{job.company}' ({company_key}) is suppressed or in cooldown"
 
     return True, None
 
@@ -158,8 +165,10 @@ def calculate_score(job: Job, config: Dict[str, Any], skills_cfg: Dict[str, Any]
         triggers = families[role_family].get("triggers", [])
         if any(re.search(rf'\b{re.escape(t)}\b', title_lower) for t in triggers):
             title_pts += 10
+        elif any(w in title_lower for w in ["developer", "engineer", "programmer", "software"]):
+            title_pts += 5
 
-    seniority_accept = ["fresher", "junior", "trainee", "intern", "associate", "graduate", "entry", "jr"]
+    seniority_accept = ["fresher", "junior", "trainee", "intern", "associate", "graduate", "entry", "jr", "0-1", "0-2"]
     if any(re.search(rf'\b{re.escape(s)}\b', title_lower) for s in seniority_accept):
         title_pts += 10
 

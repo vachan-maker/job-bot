@@ -40,6 +40,28 @@ filters:
     - model
     - support
     - bpo
+    - hr
+    - human resources
+    - talent acquisition
+    - business development
+    - bde
+    - bda
+    - bdo
+    - graphic
+    - designer
+    - videographer
+    - video
+    - vfx
+    - animation
+    - electrician
+    - facility
+    - logistics
+    - tele caller
+    - telecaller
+    - telecalling
+    - customer care
+    - call centre
+    - operations
   skip_walk_ins: true
   company_cooldown_days: 30
 

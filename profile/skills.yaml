@@ -9,6 +9,8 @@ families:
       - eloquent
       - blade
       - composer
+      - codeigniter
+      - wordpress
     must_have:
       - php
       - laravel
@@ -46,6 +48,9 @@ families:
       - regression
       - quality assurance
       - software tester
+      - testing
+      - tester
+      - automation testing
     must_have:
       - qa
       - manual testing
@@ -62,6 +67,8 @@ families:
       - functional testing
       - git
       - black box
+      - testing
+      - test
     nice_to_have:
       - automated testing
       - rest api
@@ -83,6 +90,8 @@ families:
       - aws
       - deployment
       - systems engineer
+      - sysadmin
+      - infrastructure
     must_have:
       - docker
       - linux
@@ -99,6 +108,7 @@ families:
       - virtual machines
       - deployment
       - security
+      - server
     nice_to_have:
       - python
       - cicd
@@ -114,6 +124,7 @@ families:
       - flask
       - fastapi
       - backend
+      - odoo
     must_have:
       - python
       - django
@@ -130,6 +141,7 @@ families:
       - javascript
       - http
       - crud
+      - database
     nice_to_have:
       - fastapi
       - flask
@@ -145,16 +157,20 @@ families:
       - node
       - javascript
       - full stack
+      - fullstack
       - mern
       - typescript
       - frontend
       - web developer
+      - web development
+      - software developer
+      - angular
+      - vue
     must_have:
       - javascript
       - typescript
       - react
       - node
-      - node.js
       - express
       - html5
       - css3
@@ -165,6 +181,9 @@ families:
       - frontend
       - backend
       - full stack
+      - web
+      - api
+      - database
     nice_to_have:
       - next.js
       - tailwind
@@ -183,6 +202,9 @@ families:
       - research intern
       - artificial intelligence
       - machine learning
+      - nlp
+      - data engineer
+      - prompt
     must_have:
       - python
       - machine learning
@@ -199,6 +221,8 @@ families:
       - embeddings
       - pandas
       - numpy
+      - data
+      - model
     nice_to_have:
       - langchain
       - pytorch
