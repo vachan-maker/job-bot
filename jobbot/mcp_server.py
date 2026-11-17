@@ -352,10 +352,10 @@ def suppress_company(company: str, reason: str = "manual") -> Dict[str, Any]:
     description="Fetch the candidate's confirmed resume facts and achievements (source of truth)."
 )
 def get_candidate_facts() -> str:
-    facts_path = Path("profile/facts.md")
-    if facts_path.exists():
-        return facts_path.read_text(encoding="utf-8")
-    return "profile/facts.md not found."
+    for candidate in [Path("profile/facts.local.md"), Path("profile/facts.md"), Path("profile/facts.example.md")]:
+        if candidate.exists():
+            return candidate.read_text(encoding="utf-8")
+    return "No candidate facts file found (expected profile/facts.local.md or profile/facts.md)."
 
 @server.resource("jobbot://status", name="pipeline_status", description="Current pipeline metrics and application state counts")
 def resource_pipeline_status() -> str:

@@ -115,6 +115,11 @@ def tailor_job(job: Job, config: Dict[str, Any], facts_path: Path = Path("profil
     out_dir = create_output_directory(job, resume_root)
     target_tex = out_dir / "resume.tex"
 
+    if not facts_path.exists():
+        for cand in [Path("profile/facts.local.md"), Path("profile/facts.md"), Path("profile/facts.example.md")]:
+            if cand.exists():
+                facts_path = cand
+                break
     facts_text = facts_path.read_text(encoding="utf-8") if facts_path.exists() else ""
     prompt_template_path = Path("profile/tailor_prompt.md")
     prompt_template = prompt_template_path.read_text(encoding="utf-8") if prompt_template_path.exists() else ""

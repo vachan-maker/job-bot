@@ -87,6 +87,11 @@ def validate_pdf(
 
     # 4. Fact diff check
     facts_text = ""
+    if not facts_path.exists():
+        for candidate in [Path("profile/facts.local.md"), Path("profile/facts.md"), Path("profile/facts.example.md")]:
+            if candidate.exists():
+                facts_path = candidate
+                break
     if facts_path.exists():
         facts_text = facts_path.read_text(encoding="utf-8")
 

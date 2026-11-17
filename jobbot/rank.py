@@ -15,8 +15,19 @@ def load_skills(skills_path: Path = Path("profile/skills.yaml")) -> Dict[str, An
         return yaml.safe_load(f) or {}
 
 def load_config(config_path: Path = Path("config.yaml")) -> Dict[str, Any]:
+    # Check for local untracked override first
+    if config_path == Path("config.yaml"):
+        local_config = Path("config.local.yaml")
+        if local_config.exists():
+            config_path = local_config
+
     if not config_path.exists():
-        return {}
+        example_path = Path("config.example.yaml")
+        if example_path.exists():
+            config_path = example_path
+        else:
+            return {}
+
     with open(config_path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
 
