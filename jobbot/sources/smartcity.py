@@ -1,7 +1,7 @@
 import re
 import time
 import logging
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Set
 from datetime import date, datetime
 import requests
 from bs4 import BeautifulSoup
@@ -88,7 +88,7 @@ class SmartCitySource:
 
         return role or t, company or "SmartCity Tenant"
 
-    def list_jobs(self, max_pages: Optional[int] = None) -> List[Job]:
+    def list_jobs(self, max_pages: Optional[int] = None, known_ids: Optional[Set[str]] = None) -> List[Job]:
         url = f"{self.base_url}/media-hub/job-openings/"
         try:
             resp = self.session.get(url, timeout=15)

@@ -2,7 +2,7 @@ import re
 import json
 import time
 import logging
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Set
 from datetime import date, datetime
 import requests
 from bs4 import BeautifulSoup
@@ -60,7 +60,7 @@ class TechnoparkSource:
                 pass
         return None
 
-    def list_jobs(self, max_pages: Optional[int] = None) -> List[Job]:
+    def list_jobs(self, max_pages: Optional[int] = None, known_ids: Optional[Set[str]] = None) -> List[Job]:
         all_jobs: List[Job] = []
         page = 1
         last_page = 1
@@ -87,10 +87,19 @@ class TechnoparkSource:
             last_page = pagination.get("last_page", 1)
             raw_items = pagination.get("data", []) if "data" in pagination else data.get("data", [])
 
+            jobs_on_page = []
             for item in raw_items:
                 job = self.parse_list_item(item)
                 if job:
+                    jobs_on_page.append(job)
                     all_jobs.append(job)
+
+            # Early-stop: if every job on this page is already known, don't fetch further pages
+            if known_ids is not None and jobs_on_page:
+                page_ids = {j.source_job_id for j in jobs_on_page}
+                if page_ids.issubset(known_ids):
+                    logger.info(f"Technopark: all {len(page_ids)} jobs on page {page} already seen — stopping early.")
+                    break
 
             page += 1
             time.sleep(self.delay)

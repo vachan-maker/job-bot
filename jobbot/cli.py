@@ -101,9 +101,17 @@ def scrape(
     cursor = conn.cursor()
 
     for src in sources_to_run:
+        # Load already-scraped IDs for this source to enable early-stop pagination
+        cursor.execute(
+            "SELECT source_job_id FROM jobs WHERE source = ? AND jd_text IS NOT NULL AND jd_text != ''",
+            (src.name,)
+        )
+        known_ids = {row["source_job_id"] for row in cursor.fetchall()}
+        logger.info(f"{src.name}: {len(known_ids)} already-scraped job IDs loaded for dedup.")
+
         console.print(f"[bold cyan]Scraping list from {src.name}...[/bold cyan]")
         try:
-            jobs = src.list_jobs(max_pages=max_pages)
+            jobs = src.list_jobs(max_pages=max_pages, known_ids=known_ids if not full else None)
             console.print(f"Found [green]{len(jobs)}[/green] job listings on {src.name}.")
         except Exception as e:
             console.print(f"[bold red]Failed to scrape {src.name}: {e}[/bold red]")

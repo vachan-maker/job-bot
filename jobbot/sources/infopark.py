@@ -1,7 +1,7 @@
 import re
 import time
 import logging
-from typing import List, Optional
+from typing import List, Optional, Set
 from datetime import date, datetime
 import requests
 from bs4 import BeautifulSoup
@@ -45,7 +45,7 @@ class InfoparkSource:
                 pass
         return None
 
-    def list_jobs(self, max_pages: Optional[int] = None) -> List[Job]:
+    def list_jobs(self, max_pages: Optional[int] = None, known_ids: Optional[Set[str]] = None) -> List[Job]:
         pages_to_crawl = max_pages or self.max_pages
         all_jobs: List[Job] = []
         consecutive_empty_pages = 0
@@ -69,6 +69,13 @@ class InfoparkSource:
             else:
                 consecutive_empty_pages = 0
                 all_jobs.extend(jobs_on_page)
+
+                # Early-stop: if every job on this page is already known, don't fetch further pages
+                if known_ids is not None:
+                    page_ids = {j.source_job_id for j in jobs_on_page}
+                    if page_ids.issubset(known_ids):
+                        logger.info(f"Infopark: all {len(page_ids)} jobs on page {page} already seen — stopping early.")
+                        break
 
             time.sleep(self.delay)
 

@@ -1,7 +1,7 @@
 import re
 import time
 import logging
-from typing import List, Optional
+from typing import List, Optional, Set
 from datetime import date, datetime
 import requests
 from bs4 import BeautifulSoup
@@ -42,7 +42,7 @@ class ULCyberparkSource:
                 pass
         return None
 
-    def list_jobs(self, max_pages: Optional[int] = None) -> List[Job]:
+    def list_jobs(self, max_pages: Optional[int] = None, known_ids: Optional[Set[str]] = None) -> List[Job]:
         url = f"{self.base_url}/jobs"
         try:
             resp = self.session.get(url, timeout=15)
