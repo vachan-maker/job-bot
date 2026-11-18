@@ -27,6 +27,7 @@ from jobbot.mailer import render_draft, send_draft, is_within_sending_window
 from jobbot.report import generate_daily_digest, generate_weekly_report
 from jobbot.tracker import poll_imap_for_replies
 from jobbot.normalize import normalize_company_name
+from jobbot import services
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -270,6 +271,7 @@ def tailor(
     else:
         cursor.execute("SELECT * FROM jobs WHERE state = 'shortlisted' AND band = 'A' ORDER BY score DESC LIMIT 8")
         jobs_to_tailor = [row_to_job(r) for r in cursor.fetchall()]
+    conn.close()
 
     if not jobs_to_tailor:
         console.print("[yellow]No eligible jobs to tailor.[/yellow]")
@@ -278,35 +280,12 @@ def tailor(
     console.print(f"Tailoring {len(jobs_to_tailor)} resumes...")
     for job in jobs_to_tailor:
         console.print(f"Tailoring for [cyan]{job.company}[/cyan] — {job.title}...")
-        success, pdf_path, details = tailor_job(job, config)
-
-        if success and pdf_path:
-            cursor.execute(
-                """
-                INSERT INTO resumes (job_id, dir, tex_path, pdf_path, base_used, validation, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    job.id,
-                    str(pdf_path.parent),
-                    str(pdf_path.parent / "resume.tex"),
-                    str(pdf_path),
-                    details.get("base_used", ""),
-                    str(details.get("validation", {})),
-                    datetime.now().isoformat()
-                )
-            )
-            cursor.execute("UPDATE jobs SET state = ?, skip_reason = NULL WHERE id = ?", ("tailored", job.id))
-            console.print(f"[bold green]Successfully tailored and validated:[/bold green] {pdf_path.name}")
+        res = services.tailor_single_job(job.id, config=config)
+        if res["success"]:
+            pdf_name = Path(res["pdf_path"]).name
+            console.print(f"[bold green]Successfully tailored and validated:[/bold green] {pdf_name}")
         else:
-            cursor.execute(
-                "UPDATE jobs SET state = ?, skip_reason = ? WHERE id = ?",
-                ("manual", "Tailoring/Validation failed", job.id)
-            )
-            console.print(f"[bold red]Failed tailoring job {job.id}:[/bold red] {details.get('error') or details.get('validation')}")
-
-    conn.commit()
-    conn.close()
+            console.print(f"[bold red]Failed tailoring job {job.id}:[/bold red] {res.get('error') or res.get('validation')}")
 
 @app.command()
 def draft(
@@ -327,24 +306,14 @@ def draft(
         cursor.execute("SELECT * FROM jobs WHERE state = 'tailored'")
 
     jobs = [row_to_job(r) for r in cursor.fetchall()]
+    conn.close()
 
     for job in jobs:
-        cursor.execute("SELECT pdf_path FROM resumes WHERE job_id = ? ORDER BY id DESC LIMIT 1", (job.id,))
-        res_row = cursor.fetchone()
-        if not res_row or not res_row["pdf_path"]:
-            console.print(f"[yellow]No compiled resume found for job {job.id}. Run tailor first.[/yellow]")
-            continue
-
-        pdf_path = Path(res_row["pdf_path"])
-        draft_obj = render_draft(job, pdf_path, config)
-
-        # Save draft eml in preview
-        send_draft(draft_obj, config, dry_run=True)
-        cursor.execute("UPDATE jobs SET state = ? WHERE id = ?", ("drafted", job.id))
-        console.print(f"[green]Draft generated for Job {job.id} ({job.company}): {draft_obj.subject}[/green]")
-
-    conn.commit()
-    conn.close()
+        res = services.draft_single_job(job.id, config=config)
+        if res["success"]:
+            console.print(f"[green]Draft generated for Job {job.id} ({job.company}): {res['subject']}[/green]")
+        else:
+            console.print(f"[yellow]{res.get('error')}[/yellow]")
 
 @app.command()
 def approve(
@@ -364,13 +333,11 @@ def approve(
         console.print("[yellow]Specify job IDs or use --all-band-A[/yellow]")
         conn.close()
         return
-
-    for jid in ids:
-        cursor.execute("UPDATE jobs SET state = 'approved' WHERE id = ?", (jid,))
-        console.print(f"[bold green]Job {jid} approved for sending.[/bold green]")
-
-    conn.commit()
     conn.close()
+
+    approved_ids = services.approve_jobs_by_ids(ids)
+    for jid in approved_ids:
+        console.print(f"[bold green]Job {jid} approved for sending.[/bold green]")
 
 @app.command()
 def send(
@@ -392,53 +359,21 @@ def send(
 
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM jobs WHERE state = 'approved' LIMIT ?", (limit,))
-    jobs = [row_to_job(r) for r in cursor.fetchall()]
+    cursor.execute("SELECT id FROM jobs WHERE state = 'approved' LIMIT ?", (limit,))
+    job_ids = [r["id"] for r in cursor.fetchall()]
+    conn.close()
 
-    if not jobs:
+    if not job_ids:
         console.print("[yellow]No approved applications ready to send.[/yellow]")
-        conn.close()
         return
 
-    console.print(f"Sending {len(jobs)} applications (dry_run={dry_run})...")
-
-    for job in jobs:
-        cursor.execute("SELECT pdf_path, base_used FROM resumes WHERE job_id = ? ORDER BY id DESC LIMIT 1", (job.id,))
-        res_row = cursor.fetchone()
-        if not res_row:
-            continue
-
-        pdf_path = Path(res_row["pdf_path"])
-        draft_obj = render_draft(job, pdf_path, config)
-        res = send_draft(draft_obj, config, dry_run=dry_run)
-
-        if res.status in ("sent", "dry_run"):
-            cursor.execute(
-                """
-                INSERT OR REPLACE INTO applications (job_id, to_addr, subject, message_id, sent_at, status, resumed_from)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                (job.id, res.to_addr, res.subject, res.message_id, res.sent_at, res.status, res_row["base_used"])
-            )
-            # Update company last_contacted
-            company_key = normalize_company_name(job.company)
-            cursor.execute(
-                """
-                INSERT INTO companies (name_key, name, last_contacted)
-                VALUES (?, ?, ?)
-                ON CONFLICT(name_key) DO UPDATE SET
-                    last_contacted = excluded.last_contacted
-                """,
-                (company_key, job.company, datetime.now().isoformat())
-            )
-            new_state = "sent" if not dry_run else "approved"
-            cursor.execute("UPDATE jobs SET state = ? WHERE id = ?", (new_state, job.id))
-            console.print(f"[green]Successfully processed Job {job.id} to {res.to_addr} (Status: {res.status})[/green]")
+    console.print(f"Sending {len(job_ids)} applications (dry_run={dry_run})...")
+    for jid in job_ids:
+        res = services.send_single_job(jid, config=config, dry_run=dry_run, force=force)
+        if res["success"]:
+            console.print(f"[bold green]Successfully processed Job {jid}:[/bold green] {res.get('subject')} -> {res.get('to')} (Status: {res.get('status')})")
         else:
-            console.print(f"[bold red]Failed sending to {res.to_addr}: {res.error}[/bold red]")
-
-    conn.commit()
-    conn.close()
+            console.print(f"[bold red]Failed processing Job {jid}:[/bold red] {res.get('error')}")
 
 @app.command()
 def followup():
@@ -452,26 +387,21 @@ def followup():
 @app.command()
 def status():
     """Show current pipeline summary by state and band."""
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT state, count(*) as cnt FROM jobs GROUP BY state")
-    states = cursor.fetchall()
-
-    cursor.execute("SELECT band, count(*) as cnt FROM jobs WHERE state != 'skipped' GROUP BY band")
-    bands = cursor.fetchall()
-
-    conn.close()
+    pipeline_status = services.get_pipeline_status()
 
     table = Table(title="JobBot Pipeline Status")
     table.add_column("State / Metric", style="cyan")
     table.add_column("Count", justify="right", style="bold green")
 
-    for s in states:
-        table.add_row(f"State: {s['state'] or 'unknown'}", str(s["cnt"]))
+    for state, cnt in pipeline_status["pipeline_states"].items():
+        table.add_row(f"State: {state}", str(cnt))
 
-    for b in bands:
-        table.add_row(f"Band: {b['band'] or 'unranked'}", str(b["cnt"]))
+    for band, cnt in pipeline_status["score_bands"].items():
+        table.add_row(f"Band: {band}", str(cnt))
+
+    apps = pipeline_status.get("applications", {})
+    table.add_row("Apps Sent", str(apps.get("total_sent", 0)))
+    table.add_row("Apps Replied", str(apps.get("total_replied", 0)))
 
     console.print(table)
 
@@ -493,9 +423,8 @@ def suppress(
     reason: str = typer.Option("manual", "--reason", "-r", help="Reason for suppression")
 ):
     """Manually suppress a company or email."""
-    ckey = normalize_company_name(target)
-    suppress_company(ckey, name=target, reason=reason)
-    console.print(f"[green]Suppressed '{target}' ({ckey}): {reason}[/green]")
+    res = services.suppress_company_name(target, reason=reason)
+    console.print(f"[green]Suppressed '{res['company']}' ({res['name_key']}): {res['reason']}[/green]")
 
 @app.command()
 def daily():

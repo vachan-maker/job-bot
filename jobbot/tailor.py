@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 from jobbot.models import Job
 from jobbot.normalize import normalize_company_name
-from jobbot.validate import validate_pdf
+from jobbot.validate import validate_pdf, get_candidate_facts_path
 
 load_dotenv()
 
@@ -78,10 +78,14 @@ def call_gemini_tailor(prompt: str) -> Optional[str]:
         return None
 
     try:
-        import google.generativeai as genai
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-3.8-flash")
-        resp = model.generate_content(prompt)
+        from google import genai
+        from google.genai import types
+        client = genai.Client(api_key=api_key)
+        resp = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(temperature=0.3),
+        )
         text = resp.text.strip()
         # Clean markdown codeblocks if LLM wrapped it
         if text.startswith("```"):
@@ -103,7 +107,7 @@ def compile_latex(dir_path: Path, tectonic_bin: Path) -> Tuple[bool, str]:
 
     return (res.returncode == 0), combined_log
 
-def tailor_job(job: Job, config: Dict[str, Any], facts_path: Path = Path("profile/facts.md")) -> Tuple[bool, Optional[Path], Dict[str, Any]]:
+def tailor_job(job: Job, config: Dict[str, Any], facts_path: Path = None) -> Tuple[bool, Optional[Path], Dict[str, Any]]:
     resume_root = Path(config.get("candidate", {}).get("resume_root", "~/Resume"))
     tectonic_path = Path(os.path.expanduser(config.get("tailoring", {}).get("tectonic", "~/.local/bin/tectonic")))
     forbidden_terms = config.get("tailoring", {}).get("forbidden_terms", [])
@@ -115,12 +119,8 @@ def tailor_job(job: Job, config: Dict[str, Any], facts_path: Path = Path("profil
     out_dir = create_output_directory(job, resume_root)
     target_tex = out_dir / "resume.tex"
 
-    if not facts_path.exists():
-        for cand in [Path("profile/facts.local.md"), Path("profile/facts.md"), Path("profile/facts.example.md")]:
-            if cand.exists():
-                facts_path = cand
-                break
-    facts_text = facts_path.read_text(encoding="utf-8") if facts_path.exists() else ""
+    fpath = get_candidate_facts_path(facts_path)
+    facts_text = fpath.read_text(encoding="utf-8") if fpath else ""
     prompt_template_path = Path("profile/tailor_prompt.md")
     prompt_template = prompt_template_path.read_text(encoding="utf-8") if prompt_template_path.exists() else ""
 

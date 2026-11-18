@@ -1,7 +1,7 @@
 import re
 import subprocess
 from pathlib import Path
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 
 def extract_pdf_info(pdf_path: Path) -> Dict[str, str]:
     res = subprocess.run(["pdfinfo", str(pdf_path)], capture_output=True, text=True)
@@ -20,9 +20,22 @@ def extract_pdf_text(pdf_path: Path) -> str:
         raise RuntimeError(f"pdftotext failed: {res.stderr}")
     return res.stdout
 
+def get_candidate_facts_path(preferred: Optional[Path] = None) -> Optional[Path]:
+    """Find the candidate facts file, prioritizing facts.local.md."""
+    if preferred and preferred.exists():
+        return preferred
+    for candidate in [
+        Path("profile/facts.local.md"),
+        Path("profile/facts.md"),
+        Path("profile/facts.example.md")
+    ]:
+        if candidate.exists():
+            return candidate
+    return None
+
 def validate_pdf(
     pdf_path: Path,
-    facts_path: Path = Path("profile/facts.md"),
+    facts_path: Path = None,
     build_log: str = "",
     forbidden_terms: List[str] = None
 ) -> Tuple[bool, Dict[str, Any]]:
@@ -87,21 +100,21 @@ def validate_pdf(
 
     # 4. Fact diff check
     facts_text = ""
-    if not facts_path.exists():
-        for candidate in [Path("profile/facts.local.md"), Path("profile/facts.md"), Path("profile/facts.example.md")]:
-            if candidate.exists():
-                facts_path = candidate
-                break
-    if facts_path.exists():
-        facts_text = facts_path.read_text(encoding="utf-8")
+    fpath = get_candidate_facts_path(facts_path)
+    if fpath:
+        facts_text = fpath.read_text(encoding="utf-8")
 
     # Check 4-digit years in PDF
     years = set(re.findall(r'\b(20\d\d)\b', pdf_text))
     unknown_years = [y for y in years if y not in facts_text]
 
-    # Check CGPA patterns (e.g. 7.72 or 8.x)
-    cgpa_matches = set(re.findall(r'\b(\d\.\d\d)\b', pdf_text))
-    unknown_cgpa = [c for c in cgpa_matches if c not in facts_text and c not in ["1.0", "2.0"]]
+    # Check CGPA patterns — only flag X.XX numbers that appear near GPA/CGPA keywords,
+    # to avoid false positives from version numbers, percentages, etc.
+    cgpa_context_pattern = re.compile(
+        r'(?:cgpa|gpa|grade\s+point|score)[^\n]{0,40}?(\d\.\d\d)', re.I
+    )
+    cgpa_matches = set(cgpa_context_pattern.findall(pdf_text))
+    unknown_cgpa = [c for c in cgpa_matches if c not in facts_text]
 
     if unknown_years or unknown_cgpa:
         passed_all = False
