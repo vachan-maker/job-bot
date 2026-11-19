@@ -179,7 +179,13 @@ def tailor_single_job(job_id: int, config: Optional[Dict[str, Any]] = None) -> D
         return {"success": False, "job_id": job_id, "error": f"Job {job_id} not found."}
 
     config = config or load_config()
-    success, pdf_path, details = tailor_job(job, config)
+    try:
+        import importlib
+        import jobbot.tailor
+        importlib.reload(jobbot.tailor)
+        success, pdf_path, details = jobbot.tailor.tailor_job(job, config)
+    except Exception:
+        success, pdf_path, details = tailor_job(job, config)
 
     conn = get_connection()
     cursor = conn.cursor()

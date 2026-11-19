@@ -77,12 +77,17 @@ def call_gemini_tailor(prompt: str) -> Optional[str]:
     if not api_key:
         return None
 
+    # Keep the model configurable because Gemini model availability can vary by
+    # API project.  gemini-2.0-flash was retired; the current Flash model is
+    # also the model recommended by the API when that legacy model is called.
+    model_name = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+
     try:
         from google import genai
         from google.genai import types
         client = genai.Client(api_key=api_key)
         resp = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model=model_name,
             contents=prompt,
             config=types.GenerateContentConfig(temperature=0.3),
         )
@@ -167,6 +172,27 @@ def tailor_job(job: Job, config: Dict[str, Any], facts_path: Path = None) -> Tup
         build_log=build_log,
         forbidden_terms=forbidden_terms
     )
+
+    if not valid:
+        # If LLM tailoring caused validation failure (e.g. page count overflow), fallback to sanitized base template
+        sanitized_base = base_tex_content
+        for ft in forbidden_terms:
+            sanitized_base = re.sub(rf'\b{re.escape(ft)}\b', '', sanitized_base)
+        sanitized_base = re.sub(r',\s*,', ',', sanitized_base)
+        sanitized_base = re.sub(r',\s*\}', '}', sanitized_base)
+        target_tex.write_text(sanitized_base, encoding="utf-8")
+        s, bl = compile_latex(out_dir, tectonic_path)
+        if s and pdf_path.exists():
+            v, vr = validate_pdf(
+                pdf_path,
+                facts_path=facts_path,
+                build_log=bl,
+                forbidden_terms=forbidden_terms
+            )
+            if v:
+                valid = True
+                validation_results = vr
+                build_log = bl
 
     if not valid:
         return False, pdf_path, {"validation": validation_results}

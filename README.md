@@ -13,7 +13,7 @@ A personal, fully automated job application pipeline for Kerala tech job boards 
 - **Walk-in detection** — title regex *and* `is_walk_in` flag; walk-ins are exported to `.ics` calendar files and never emailed
 - **Scoring (0–100)** — skill keyword density, title/seniority fit, location, recency, role family confidence, novel company bonus
 - **Band assignment** — A ≥ 70 (auto-shortlist), B 55–69 (review queue), C < 55 (hidden)
-- **LLM resume tailoring** — Gemini 2.5 Flash edits only confirmed bullets/skills; all fabrication gates enforced in prompt *and* validator
+- **LLM resume tailoring** — Gemini Flash edits only confirmed bullets/skills; the model is configurable with `GEMINI_MODEL` and all fabrication gates are enforced in prompt *and* validator
 - **6-gate PDF validation** — single A4 page, correct size, zero ligatures, zero forbidden terms, fact-diff against pinned facts, clean build log
 - **Personalized email drafting** — Jinja2 template, role-specific pitch, plain text + PDF attachment, BCC self
 - **Idempotency** — `UNIQUE(source, source_job_id)` in DB; `applications.job_id UNIQUE` prevents duplicate sends
@@ -92,6 +92,9 @@ chmod 600 .env
 
 ```bash
 echo 'GEMINI_API_KEY=your_key_here' >> .env
+# Optional: override the Gemini model for your API project.
+# Default: gemini-3.8-flash
+# echo 'GEMINI_MODEL=gemini-3.8-flash' >> .env
 ```
 
 Get a free key at [aistudio.google.com](https://aistudio.google.com). Without this, `tailor` falls back to copying the base resume unmodified.
