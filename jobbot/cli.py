@@ -287,6 +287,57 @@ def tailor(
         else:
             console.print(f"[bold red]Failed tailoring job {job.id}:[/bold red] {res.get('error') or res.get('validation')}")
 
+
+@app.command("manual")
+def manual_apply(
+    company: Optional[str] = typer.Option(None, "--company", "-c", help="Employer name"),
+    title: Optional[str] = typer.Option(None, "--title", "-t", help="Job title"),
+    email: Optional[str] = typer.Option(None, "--email", "-e", help="Recipient email; omit to save for manual sending"),
+    description_file: Optional[Path] = typer.Option(None, "--description-file", "-f", help="File containing copied job-page text"),
+    url: str = typer.Option("", "--url", help="Original job URL, if available"),
+    force: bool = typer.Option(False, "--force", help="Send outside the configured sending window"),
+):
+    """Enter a job manually, clean its description, tailor the resume, and optionally email it."""
+    company = company or typer.prompt("Company")
+    title = title or typer.prompt("Job title")
+
+    if description_file:
+        raw_description = description_file.read_text(encoding="utf-8")
+    else:
+        console.print("Paste the complete job page text below. Enter a line containing END when finished.")
+        lines = []
+        while True:
+            line = console.input()
+            if line.strip() == "END":
+                break
+            lines.append(line)
+        raw_description = "\n".join(lines)
+
+    if email is None:
+        email = typer.prompt("Recipient email (optional; press Enter to skip)", default="", show_default=False)
+    result = services.manual_apply(
+        company=company,
+        title=title,
+        raw_job_description=raw_description,
+        email=email or None,
+        url=url,
+        config=load_config(),
+        force=force,
+    )
+    if not result.get("success"):
+        console.print(f"[bold red]Manual application failed:[/bold red] {result.get('error') or result.get('validation')}")
+        raise typer.Exit(code=1)
+
+    console.print(f"[bold green]Tailored resume saved:[/bold green] {result['pdf_path']}")
+    if result.get("status") == "sent":
+        sent = result["email"]
+        console.print(f"[bold green]Email sent to {sent.get('to')}[/bold green]")
+    elif result.get("email"):
+        console.print(f"[yellow]{result.get('message')}[/yellow]")
+        console.print(f"Email error: {result['email'].get('error')}")
+    else:
+        console.print("[cyan]No email supplied; handle the application manually.[/cyan]")
+
 @app.command()
 def draft(
     job_ids: List[int] = typer.Argument(None, help="Job IDs to draft"),

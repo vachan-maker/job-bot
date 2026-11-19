@@ -116,6 +116,7 @@ jobbot scrape    [--source all|infopark|technopark|ulcyberpark|smartcity] [--max
 jobbot rank      [--min-score 55]
 jobbot review    [--band A|B|C] [--limit N]
 jobbot tailor    <id...> | --top 8
+jobbot manual    --company "Acme" --title "Python Developer" --description-file jd.txt [--email hr@acme.com]
 jobbot draft     <id...> | --approved
 jobbot approve   <id...> | --all-band-A
 jobbot send      [--limit 6] [--dry-run] [--force]

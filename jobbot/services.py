@@ -13,12 +13,13 @@ from jobbot.db import (
     get_connection,
     get_job_by_id,
     row_to_job,
-    suppress_company as db_suppress_company
+    suppress_company as db_suppress_company,
+    upsert_job
 )
 from jobbot.models import Job
 from jobbot.normalize import normalize_company_name
-from jobbot.rank import load_config
-from jobbot.tailor import tailor_job
+from jobbot.rank import load_config, load_skills, calculate_score
+from jobbot.tailor import tailor_job, clean_job_description
 from jobbot.validate import get_candidate_facts_path
 from jobbot.mailer import render_draft, send_draft, is_within_sending_window
 
@@ -235,6 +236,61 @@ def tailor_single_job(job_id: int, config: Optional[Dict[str, Any]] = None) -> D
         }
 
 
+def manual_apply(
+    company: str,
+    title: str,
+    raw_job_description: str,
+    email: Optional[str] = None,
+    url: str = "",
+    config: Optional[Dict[str, Any]] = None,
+    force: bool = False,
+) -> Dict[str, Any]:
+    """Create, clean, tailor, and optionally send a manually entered job."""
+    config = config or load_config()
+    cleaned_jd = clean_job_description(raw_job_description)
+    if not cleaned_jd:
+        return {"success": False, "error": "Job description is empty after cleaning."}
+
+    job = Job(
+        source="manual",
+        source_job_id=f"manual-{datetime.now().strftime('%Y%m%d%H%M%S%f')}",
+        url=url,
+        company=company.strip(),
+        title=title.strip(),
+        emails=[email.strip().lower()] if email and email.strip() else [],
+        jd_text=cleaned_jd,
+        state="shortlisted",
+    )
+    score = calculate_score(job, config, load_skills())
+    job.role_family = score.role_family
+    job.score = score.total
+    job.score_reason = score.components
+    job.band = score.band
+    job_id = upsert_job(job)
+    job.id = job_id
+
+    tailored = tailor_single_job(job_id, config=config)
+    result = {"success": tailored.get("success", False), "job_id": job_id, "cleaned_jd": cleaned_jd}
+    result.update(tailored)
+    if not tailored.get("success"):
+        return result
+
+    # Keep the exact cleaned input beside the generated resume for later manual use.
+    Path(tailored["pdf_path"]).parent.joinpath("job_description.txt").write_text(
+        cleaned_jd, encoding="utf-8"
+    )
+
+    if not job.emails:
+        result["status"] = "saved"
+        result["message"] = "No recipient email supplied; tailored resume saved for manual handling."
+        return result
+
+    sent = send_single_job(job_id, config=config, force=force)
+    result["email"] = sent
+    result["status"] = "sent" if sent.get("success") else "saved_email_failed"
+    if not sent.get("success"):
+        result["message"] = "Resume was saved, but email could not be sent."
+    return result
 def draft_single_job(job_id: int, config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """Generate personalized email draft for a tailored job and save .eml preview.
 

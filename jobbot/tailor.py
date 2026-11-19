@@ -2,6 +2,8 @@ import os
 import re
 import shutil
 import subprocess
+import json
+from bs4 import BeautifulSoup
 from pathlib import Path
 from typing import Optional, Dict, Any, Tuple
 import yaml
@@ -100,6 +102,55 @@ def call_gemini_tailor(prompt: str) -> Optional[str]:
     except Exception as e:
         print(f"Gemini API tailoring failed: {e}")
         return None
+
+
+def _basic_clean_job_description(raw_text: str) -> str:
+    """Remove copied-page markup/noise when an LLM is unavailable."""
+    soup = BeautifulSoup(raw_text or "", "html.parser")
+    for element in soup(["script", "style", "nav", "header", "footer", "aside", "form", "button"]):
+        element.decompose()
+    text = soup.get_text("\n")
+    lines = []
+    previous_blank = False
+    for line in text.splitlines():
+        line = re.sub(r"\s+", " ", line).strip(" \\t•·")
+        if not line:
+            if not previous_blank and lines:
+                lines.append("")
+            previous_blank = True
+            continue
+        if re.match(r"^(share|print|apply now|sign in|login|subscribe|cookie|privacy policy)\b", line, re.I):
+            continue
+        lines.append(line)
+        previous_blank = False
+    return "\n".join(lines).strip()
+
+
+def clean_job_description(raw_text: str) -> str:
+    """Use Gemini to turn pasted page content into a concise, structured JD."""
+    fallback = _basic_clean_job_description(raw_text)
+    if not fallback or not os.getenv("GEMINI_API_KEY"):
+        return fallback
+
+    prompt = f"""Clean and structure the following pasted job-page content for resume tailoring.
+Remove navigation, cookie notices, duplicate text, social/share controls, and unrelated company marketing.
+Keep only job title (if present), responsibilities, required/preferred skills, experience, education,
+location, employment type, and application instructions. Preserve facts and wording; do not invent or
+summarize away requirements. Return JSON only in this shape: {{\"job_description\": \"...\"}}.
+
+PASTED CONTENT:
+{raw_text}
+"""
+    cleaned = call_gemini_tailor(prompt)
+    if cleaned:
+        try:
+            parsed = json.loads(cleaned)
+            cleaned = parsed.get("job_description", "")
+        except (json.JSONDecodeError, AttributeError):
+            cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", cleaned.strip(), flags=re.I)
+        if cleaned.strip():
+            return _basic_clean_job_description(cleaned)
+    return fallback
 
 def compile_latex(dir_path: Path, tectonic_bin: Path) -> Tuple[bool, str]:
     tex_path = dir_path / "resume.tex"
