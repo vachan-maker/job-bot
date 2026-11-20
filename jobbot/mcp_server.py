@@ -68,6 +68,32 @@ def tailor_resume(job_id: int) -> Dict[str, Any]:
 
 
 @server.tool(
+    name="manual_apply",
+    description=(
+        "Create an application from a manually supplied job description. The description is cleaned and "
+        "structured with an LLM before resume tailoring. If email is supplied, send the tailored resume "
+        "automatically; otherwise save the resume and cleaned job description for manual handling."
+    )
+)
+def manual_apply(
+    company: str,
+    title: str,
+    job_description: str,
+    email: Optional[str] = None,
+    url: str = "",
+    force: bool = False,
+) -> Dict[str, Any]:
+    return services.manual_apply(
+        company=company,
+        title=title,
+        raw_job_description=job_description,
+        email=email,
+        url=url,
+        force=force,
+    )
+
+
+@server.tool(
     name="draft_application",
     description="Generate personalized email draft for a tailored job and save .eml preview."
 )

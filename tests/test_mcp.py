@@ -17,6 +17,7 @@ async def test_mcp_server_initialization():
     assert "get_job_details" in tool_names
     assert "search_jobs" in tool_names
     assert "tailor_resume" in tool_names
+    assert "manual_apply" in tool_names
     assert "draft_application" in tool_names
     assert "approve_application" in tool_names
     assert "send_application" in tool_names

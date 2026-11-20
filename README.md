@@ -88,16 +88,20 @@ EOF
 chmod 600 .env
 ```
 
-### 4. Add Gemini API key (for LLM tailoring)
+### 4. Add an LLM API key (for LLM tailoring)
 
 ```bash
 echo 'GEMINI_API_KEY=your_key_here' >> .env
 # Optional: override the Gemini model for your API project.
 # Default: gemini-3.8-flash
 # echo 'GEMINI_MODEL=gemini-3.8-flash' >> .env
+
+# Optional fallback Gemini model, used if the primary model is unavailable or rate-limited.
+# Default: gemini-3.1-flash-lite
+# echo 'GEMINI_FALLBACK_MODEL=gemini-3.1-flash-lite' >> .env
 ```
 
-Get a free key at [aistudio.google.com](https://aistudio.google.com). Without this, `tailor` falls back to copying the base resume unmodified.
+Get a key at [Google AI Studio](https://aistudio.google.com). JobBot tries the primary Gemini model first, then the fallback Gemini model with the same key when it fails. Without a key, `tailor` falls back to copying the base resume unmodified.
 
 ### 5. Run your first scrape
 

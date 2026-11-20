@@ -74,15 +74,19 @@ def create_output_directory(job: Job, resume_root: Path) -> Path:
     out_dir.mkdir(parents=True, exist_ok=True)
     return out_dir
 
-def call_gemini_tailor(prompt: str) -> Optional[str]:
+def _clean_llm_text(text: str) -> str:
+    """Remove markdown code fences when a model wraps plain output."""
+    text = (text or "").strip()
+    if text.startswith("```"):
+        text = re.sub(r'^```(?:latex|tex|json)?\n', '', text, flags=re.I)
+        text = re.sub(r'\n```$', '', text)
+    return text.strip()
+
+
+def _call_gemini_model(prompt: str, model_name: str) -> Optional[str]:
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         return None
-
-    # Keep the model configurable because Gemini model availability can vary by
-    # API project.  gemini-2.0-flash was retired; the current Flash model is
-    # also the model recommended by the API when that legacy model is called.
-    model_name = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 
     try:
         from google import genai
@@ -93,15 +97,41 @@ def call_gemini_tailor(prompt: str) -> Optional[str]:
             contents=prompt,
             config=types.GenerateContentConfig(temperature=0.3),
         )
-        text = resp.text.strip()
-        # Clean markdown codeblocks if LLM wrapped it
-        if text.startswith("```"):
-            text = re.sub(r'^```(?:latex|tex)?\n', '', text)
-            text = re.sub(r'\n```$', '', text)
-        return text.strip()
+        return _clean_llm_text(resp.text)
     except Exception as e:
-        print(f"Gemini API tailoring failed: {e}")
+        print(f"Gemini API tailoring failed for {model_name}: {e}")
         return None
+
+
+def call_gemini_tailor(prompt: str) -> Optional[str]:
+    """Call the primary Gemini model configured for tailoring."""
+    return _call_gemini_model(prompt, os.getenv("GEMINI_MODEL", "gemini-3.8-flash"))
+
+
+def call_gemini_fallback_tailor(prompt: str) -> Optional[str]:
+    """Call a second Gemini model with the same API key if the primary fails."""
+    return _call_gemini_model(
+        prompt,
+        os.getenv("GEMINI_FALLBACK_MODEL", "gemini-3.1-flash-lite"),
+    )
+
+
+def call_llm_tailor(prompt: str) -> Optional[str]:
+    """Use the primary Gemini model, then a lower-demand Gemini fallback."""
+    if not os.getenv("GEMINI_API_KEY"):
+        return None
+
+    result = call_gemini_tailor(prompt)
+    if result:
+        return result
+
+    primary_model = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+    fallback_model = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-3.1-flash-lite")
+    if fallback_model == primary_model:
+        return None
+
+    print(f"Retrying Gemini tailoring with fallback model {fallback_model}")
+    return call_gemini_fallback_tailor(prompt)
 
 
 def _basic_clean_job_description(raw_text: str) -> str:
@@ -127,7 +157,7 @@ def _basic_clean_job_description(raw_text: str) -> str:
 
 
 def clean_job_description(raw_text: str) -> str:
-    """Use Gemini to turn pasted page content into a concise, structured JD."""
+    """Use the configured LLM to turn pasted page content into a concise JD."""
     fallback = _basic_clean_job_description(raw_text)
     if not fallback or not os.getenv("GEMINI_API_KEY"):
         return fallback
@@ -141,7 +171,7 @@ summarize away requirements. Return JSON only in this shape: {{\"job_description
 PASTED CONTENT:
 {raw_text}
 """
-    cleaned = call_gemini_tailor(prompt)
+    cleaned = call_llm_tailor(prompt)
     if cleaned:
         try:
             parsed = json.loads(cleaned)
@@ -189,7 +219,7 @@ def tailor_job(job: Job, config: Dict[str, Any], facts_path: Path = None) -> Tup
             .replace("{jd}", job.jd_text or job.title)
             .replace("{tex}", base_tex_content)
         )
-        tailored_tex = call_gemini_tailor(prompt)
+        tailored_tex = call_llm_tailor(prompt)
 
     if not tailored_tex:
         # Fallback to base resume with updated metadata comments
