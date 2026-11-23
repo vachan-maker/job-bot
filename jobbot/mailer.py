@@ -66,8 +66,6 @@ def render_draft(job: Job, pdf_path: Path, config: Dict[str, Any], template_dir:
     body = template.render(
         company=job.company,
         title=job.title,
-        source=job.source,
-        posted_on=job.posted_on,
         pitch=pitch,
         portfolio=candidate.get("portfolio", "https://example.com"),
         candidate_name=candidate.get("name", "Applicant"),
